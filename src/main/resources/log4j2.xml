@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <!--공통 속성 설정 -->
+    <Properties>
+        <Property name="logFileName">DEBUG</Property>
+        <Property name="consoleLayout">[%d{yyyy-MM-dd HH:mm:ss}] [%-5p] [%c{1}:%L] - %m%n</Property>
+        <Property name="fileLayout">%d [%t] %-5level %c(%M:%L) - %m%n</Property>
+    </Properties>
+
+    <!-- Log Appender 설정 -->
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${consoleLayout}"/>
+        </Console>
+
+        <RollingFile name="DEBUG"
+                     fileName="logs/${logFileName}.log"
+                     filePattern="logs/${logFileName}.%d{yyyy-MM-dd-hh}.log">
+            <PatternLayout pattern="${fileLayout}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy
+                        modulate="true"
+                        interval="1"/><!-- 시간별 로그 파일 생성-->
+            </Policies>
+            <DefaultRolloverStrategy max="5" fileIndex="min"> <!-- 롤링 파일 5개 까지 생성 -->
+                <Delete basePath="/logs" maxDepth="3">
+                    <IfLastModified age="10d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+
+        <RollingFile name="ERROR"
+                     fileName="logs/ERROR.log"
+                     filePattern="logs/ERROR.%d{yyyy-MM-dd}.log">
+            <PatternLayout pattern="${fileLayout}"/>
+            <!--LevelRangeFilter필터를 사용할때에 단일 level의 필터만 허용한다. -->
+            <LevelRangeFilter minLevel="ERROR" maxLevel="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="20 MB"/>
+            </Policies>
+            <DefaultRolloverstrategy>
+                <Delete basePath="/logs" maxDepth="3">
+                    <IfLastModified age="10d"/>
+                </Delete>
+            </DefaultRolloverstrategy>
+        </RollingFile>
+
+
+        <Routing name="ROUTING">
+            <Routes pattern="$${ctx:clientIp}">
+                <Route>
+                    <RollingFile name="Rolling-${ctx:clientIp}"
+                                 fileName="logs/DEBUG.${ctx:clientIp}.out"
+                                 filePattern="logs/DEBUG.${ctx:clientIp}-%d{yyyy-MM-dd}.out">
+                        <PatternLayout>
+                            <pattern>%d{yyyy-MM-dd:hh:mm:ss} [%p][%C{1}][%M (%L)}][$${ctx:clientIp}] | %m%n</pattern>
+                        </PatternLayout>
+                        <Policies>
+                            <SizeBasedTriggeringPolicy size="50MB"/>
+                        </Policies>
+                        <DefaultRolloverStrategy max="1"/>
+                    </RollingFile>
+                </Route>
+
+                <Route key="DEFAULT">
+                    <RollingFile name="Rolling-default"
+                                 fileName="logs/default/default.out"
+                                 filePattern="logs/default/default-%d{yyyy-MM-dd}.out">
+                        <PatternLayout>
+                            <pattern>%d{yyyy-MM-dd:hh:mm:ss} [%p][%C{1}][%M (%L)}] | %m%n</pattern>
+                        </PatternLayout>
+                        <Policies>
+                            <SizeBasedTriggeringPolicy size="50MB"/>
+                        </Policies>
+                        <DefaultRolloverStrategy max="1"/>
+                    </RollingFile>
+                </Route>
+            </Routes>
+        </Routing>
+    </Appenders>
+
+
+    <!--Log가 찍힐 대상 설정.-->
+    <Loggers>
+        <!-- 스프링 프레임워크에서 찍는건 level을 info로 설정 -->
+        <logger name="org.springframework" level="info" additivity="false">
+            <AppenderRef ref="console"/>
+        </logger>
+
+        <!-- Demo 로그 설정 -->
+        <logger name="com.example.async" level="debug" additivity="false">
+            <AppenderRef ref="console"/>
+            <AppenderRef ref="DEBUG"/>
+            <AppenderRef ref="ROUTING"/>
+        </logger>
+
+        <logger name="com.example" level="debug" additivity="false">
+            <AppenderRef ref="console"/>
+        </logger>
+
+        <!-- ROOT logger-->
+        <Root level="info">
+            <AppenderRef ref="console"/>
+        </Root>
+
+    </Loggers>
+</Configuration>
